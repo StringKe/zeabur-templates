@@ -11,10 +11,10 @@ spec:
       type: DOMAIN
       name: Zitadel URL
       description: Your Zitadel URL
-    - key: ZITADEl_MASTER_KEY
+    - key: ZITADEL_MASTERKEY
       type: STRING
       name: Zitadel Master Key
-      description: zitadel Master Key, random 32 characters, you can use `openssl rand -hex 32` to generate
+      description: master key need 32 characters, you can use `openssl rand -hex 32` to generate
   tags:
     - Website
     - Database
@@ -157,18 +157,27 @@ spec:
       spec:
         source:
           image: ghcr.io/zitadel/zitadel:v2.68.0
+          # command:
+          #   - sh
+          # args:
+          #   - -c
+          #   - /app/zitadel
+          #   - start-from-init
+          #   - --masterkeyFromEnv
+          #   - --externalDomain ${ZEABUR_WEB_DOMAIN}
+          #   - --tlsMode external
           command:
-            - start-from-init -
+            - /app/zitadel
           args:
-            - -masterkey "$ZITADEl_MASTER_KEY"
-            - --tlsMode disabled
+            - start-from-init
+            - --masterkeyFromEnv
+            - --externalDomain ${ZEABUR_WEB_DOMAIN}
+            - --tlsMode external
         ports:
           - id: web
             port: 8080
             type: HTTP
         env:
-          ZITADEl_MASTER_KEY:
-            default: ${ZEABUR_CONSOLE_URL}
           ZITADEL_DATABASE_POSTGRES_HOST:
             default: ${POSTGRES_HOST}
           ZITADEL_DATABASE_POSTGRES_PORT:
