@@ -1,0 +1,196 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Zitadel
+spec:
+  description: Identity infrastructure, simplified for you.
+  icon: https://zitadel.com/icons/favicon-32x32.png
+  variables:
+    - key: ENDPOINT_DOMAIN
+      type: DOMAIN
+      name: Zitadel URL
+      description: Your Zitadel URL
+    - key: ZITADEl_MASTER_KEY
+      type: STRING
+      name: Zitadel Master Key
+      description: zitadel Master Key, random 32 characters, you can use `openssl rand -hex 32` to generate
+  tags:
+    - Website
+    - Database
+    - API
+  readme: |
+    # ZITADEL
+
+    dentity infrastructure, simplified for you.
+
+    ## Features
+
+    Are you searching for a user management tool that is quickly set up like Auth0 and open source like Keycloak?
+
+    Do you have a project that requires multi-tenant user management with self-service for your customers?
+
+    Look no further — ZITADEL is the identity infrastructure, simplified for you.
+
+    We provide you with a wide range of out-of-the-box features to accelerate your project, including:
+
+    :white_check_mark: Multi-tenancy with team management  
+    :white_check_mark: Secure login  
+    :white_check_mark: Self-service  
+    :white_check_mark: OpenID Connect  
+    :white_check_mark: OAuth2.x  
+    :white_check_mark: SAML2  
+    :white_check_mark: LDAP  
+    :white_check_mark: Passkeys / FIDO2  
+    :white_check_mark: OTP  
+    and an unlimited audit trail is there for you, ready to use.
+
+    With ZITADEL, you are assured of a robust and customizable turnkey solution for all your authentication and authorization needs.
+
+    ## Deployment
+
+    It is a out-of-the-box template. To change your domain, just bind a new domain and restart your service. `_DOMAIN` variables are only for the domain binding and you can feel free to not change them.
+
+    For the detailed deployment steps, [check our documentation](https://zeabur.com/docs/marketplace/zitadel).
+  services:
+    - name: postgresql
+      icon: https://raw.githubusercontent.com/zeabur/service-icons/main/marketplace/postgresql.svg
+      template: PREBUILT
+      spec:
+        source:
+          image: postgres:16
+          command:
+            - docker-entrypoint.sh
+            - -c
+            - config_file=/etc/postgresql/postgresql.conf
+        ports:
+          - id: database
+            port: 5432
+            type: TCP
+        volumes:
+          - id: data
+            dir: /var/lib/postgresql/data
+        instructions:
+          - type: TEXT
+            title: Connection String
+            content: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}
+          - type: TEXT
+            title: PostgreSQL Connect Command
+            content: psql "postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${PORT_FORWARDED_HOSTNAME}:${DATABASE_PORT_FORWARDED_PORT}/${POSTGRES_DATABASE}"
+          - type: TEXT
+            title: PostgreSQL username
+            content: ${POSTGRES_USERNAME}
+            category: Credentials
+          - type: PASSWORD
+            title: PostgresSQL password
+            content: ${POSTGRES_PASSWORD}
+            category: Credentials
+          - type: TEXT
+            title: PostgresSQL database
+            content: ${POSTGRES_DATABASE}
+            category: Credentials
+          - type: TEXT
+            title: PostgreSQL host
+            content: ${PORT_FORWARDED_HOSTNAME}
+            category: Hostname & Port
+          - type: TEXT
+            title: PostgreSQL port
+            content: ${DATABASE_PORT_FORWARDED_PORT}
+            category: Hostname & Port
+        env:
+          PGDATA:
+            default: /var/lib/postgresql/data/pgdata
+          POSTGRES_CONNECTION_STRING:
+            default: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DATABASE}
+            expose: true
+            readonly: true
+          POSTGRES_DATABASE:
+            default: ${POSTGRES_DB}
+            expose: true
+            readonly: true
+          POSTGRES_DB:
+            default: zeabur
+          POSTGRES_HOST:
+            default: ${CONTAINER_HOSTNAME}
+            expose: true
+            readonly: true
+          POSTGRES_PASSWORD:
+            default: ${PASSWORD}
+            expose: true
+          POSTGRES_PORT:
+            default: ${DATABASE_PORT}
+            expose: true
+            readonly: true
+          POSTGRES_URI:
+            default: ${POSTGRES_CONNECTION_STRING}
+            expose: true
+            readonly: true
+          POSTGRES_USER:
+            default: root
+          POSTGRES_USERNAME:
+            default: ${POSTGRES_USER}
+            expose: true
+            readonly: true
+        configs:
+          - path: /etc/postgresql/postgresql.conf
+            template: |
+              # https://github.com/postgres/postgres/blob/master/src/backend/utils/misc/postgresql.conf.sample
+              listen_addresses = '*'
+              max_connections = 100
+              shared_buffers = 128MB
+              dynamic_shared_memory_type = posix
+              max_wal_size = 1GB
+              min_wal_size = 80MB
+              log_timezone = 'Etc/UTC'
+              datestyle = 'iso, mdy'
+              timezone = 'Etc/UTC'
+              lc_messages = 'en_US.utf8'
+              lc_monetary = 'en_US.utf8'
+              lc_numeric = 'en_US.utf8'
+              lc_time = 'en_US.utf8'
+              default_text_search_config = 'pg_catalog.english'
+            permission: null
+            envsubst: null
+    - name: zitadel
+      icon: https://zitadel.com/icons/favicon-32x32.png
+      template: PREBUILT
+      spec:
+        source:
+          image: ghcr.io/zitadel/zitadel:v2.68.0
+          command:
+            - start-from-init -
+          args:
+            - -masterkey "$ZITADEl_MASTER_KEY"
+            - --tlsMode disabled
+        ports:
+          - id: web
+            port: 8080
+            type: HTTP
+        env:
+          ZITADEl_MASTER_KEY:
+            default: ${ZEABUR_CONSOLE_URL}
+          ZITADEL_DATABASE_POSTGRES_HOST:
+            default: ${POSTGRES_HOST}
+          ZITADEL_DATABASE_POSTGRES_PORT:
+            default: ${POSTGRES_PORT}
+          ZITADEL_DATABASE_POSTGRES_DATABASE:
+            default: ${POSTGRES_DATABASE}
+          ZITADEL_DATABASE_POSTGRES_USER_USERNAME:
+            default: ${POSTGRES_USERNAME}
+          ZITADEL_DATABASE_POSTGRES_USER_PASSWORD:
+            default: ${POSTGRES_PASSWORD}
+          ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE:
+            default: disable
+          ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME:
+            default: postgres
+          ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD:
+            default: postgres
+          ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE:
+            default: disable
+          ZITADEL_EXTERNALSECURE:
+            default: "false"
+      domainKey:
+        - port: web
+          variable: ENDPOINT_DOMAIN
+        - port: console
+          variable: ADMIN_ENDPOINT_DOMAIN
